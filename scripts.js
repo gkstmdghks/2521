@@ -6,7 +6,6 @@ let editIndex = -1;
 const pageName = window.location.pathname.split("/").pop();
 const subjectKey = pageName.replace(".html", "");
 const STORAGE_KEY = `problems_${subjectKey}`;
-
 const ADMIN_PASSWORD = "1234";
 
 // 관리자 로그인
@@ -40,7 +39,7 @@ function addProblem() {
   if (!isAdmin) return alert("관리자만 문제를 추가할 수 있습니다!");
 
   const title = document.getElementById("title").value.trim();
-  const imageUrl = document.getElementById("image-url")?.value.trim() || "";
+  const imageUrl = document.getElementById("image-url").value.trim();
   const answer = document.getElementById("answer").value.trim();
 
   if (!title || !answer) {
@@ -48,40 +47,53 @@ function addProblem() {
     return;
   }
 
-  const problem = { title, imageUrl, answer };
+  const newProblem = { title, imageUrl, answer };
 
   if (editIndex !== -1) {
-    problems[editIndex] = problem;
+    problems[editIndex] = newProblem;
     editIndex = -1;
     document.querySelector("#add-problem button").textContent = "문제 추가";
   } else {
-    problems.push(problem);
+    problems.push(newProblem);
   }
 
   document.getElementById("title").value = "";
-  if (document.getElementById("image-url")) document.getElementById("image-url").value = "";
+  document.getElementById("image-url").value = "";
   document.getElementById("answer").value = "";
 
   saveProblems();
 }
 
-// 문제 목록 렌더링
+// 문제 정렬 및 렌더링
 function renderProblems() {
   const list = document.getElementById("problems");
   list.innerHTML = "";
 
-  problems.forEach((p, i) => {
+  const sortType = document.getElementById("sort-type")?.value || "title";
+
+  let sortedProblems = [...problems];
+  if (sortType === "title") {
+    sortedProblems.sort((a, b) => a.title.localeCompare(b.title, "ko"));
+  } else if (sortType === "number") {
+    sortedProblems.sort((a, b) => {
+      const numA = parseInt(a.title.match(/\\d+/)?.[0]) || 0;
+      const numB = parseInt(b.title.match(/\\d+/)?.[0]) || 0;
+      return numA - numB;
+    });
+  }
+
+  sortedProblems.forEach((problem) => {
+    const i = problems.indexOf(problem);
     const li = document.createElement("li");
-    li.textContent = p.title;
+    li.textContent = problem.title;
     li.onclick = () => showProblem(i);
 
     if (isAdmin) {
       const delBtn = document.createElement("button");
       delBtn.textContent = "삭제";
-      delBtn.style.marginLeft = "10px";
       delBtn.onclick = (e) => {
         e.stopPropagation();
-        if (confirm(`'${p.title}' 문제를 삭제할까요?`)) {
+        if (confirm(`'${problem.title}' 문제를 삭제할까요?`)) {
           problems.splice(i, 1);
           saveProblems();
         }
@@ -89,12 +101,11 @@ function renderProblems() {
 
       const editBtn = document.createElement("button");
       editBtn.textContent = "수정";
-      editBtn.style.marginLeft = "5px";
       editBtn.onclick = (e) => {
         e.stopPropagation();
-        document.getElementById("title").value = p.title;
-        if (document.getElementById("image-url")) document.getElementById("image-url").value = p.imageUrl;
-        document.getElementById("answer").value = p.answer;
+        document.getElementById("title").value = problem.title;
+        document.getElementById("image-url").value = problem.imageUrl;
+        document.getElementById("answer").value = problem.answer;
         editIndex = i;
         document.querySelector("#add-problem button").textContent = "수정 완료";
       };
@@ -107,15 +118,15 @@ function renderProblems() {
   });
 }
 
-// 문제 풀기
+// 문제 보기
 function showProblem(index) {
   currentIndex = index;
-  const p = problems[index];
-  document.getElementById("solve-title").textContent = p.title;
-  const img = document.getElementById("solve-image");
+  const problem = problems[index];
+  document.getElementById("solve-title").textContent = problem.title;
 
-  if (p.imageUrl) {
-    img.src = p.imageUrl;
+  const img = document.getElementById("solve-image");
+  if (problem.imageUrl) {
+    img.src = problem.imageUrl;
     img.style.display = "block";
   } else {
     img.style.display = "none";
